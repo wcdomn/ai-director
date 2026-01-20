@@ -82,7 +82,7 @@ def get_director_response(user_input, history_context):
         return None
     
     genai.configure(api_key=google_key)
-    model = genai.GenerativeModel('gemini-3.0-pro', system_instruction=VCC_KERNEL)
+    model = genai.GenerativeModel('gemini-3-pro-preview', system_instruction=VCC_KERNEL)
     
     # 构建对话历史
     chat = model.start_chat(history=[
@@ -167,3 +167,4 @@ if prompt := st.chat_input("输入指令 (例: 镜头1，她在雨中哭泣)"):
                     "prompt_text": final_prompt
 
                 })
+
