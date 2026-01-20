@@ -82,22 +82,41 @@ def get_director_response(user_input, history_context):
         return None
     
     genai.configure(api_key=google_key)
-    model = genai.GenerativeModel('gemini-3-pro-preview', system_instruction=VCC_KERNEL)
+    
+    # 增加安全配置，防止模型拦截“忧郁”等词汇
+    safety = [
+        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+    ]
+    
+    # 使用你指定的预览版模型
+    model = genai.GenerativeModel(
+        model_name='models/gemini-3-pro-preview', 
+        system_instruction=VCC_KERNEL,
+        safety_settings=safety
+    )
     
     # 构建对话历史
     chat = model.start_chat(history=[
-        {"role": "user" if msg["role"] == "user" else "model", "parts": msg["content"]} 
+        {"role": "user" if msg["role"] == "user" else "model", "parts": [msg["content"]]} 
         for msg in history_context
     ])
     
     response = chat.send_message(user_input)
     
-    # 清洗 JSON (去除可能存在的 Markdown 标记)
+    # 检查返回内容是否被拦截
+    if not response.parts:
+        st.error("🎬 导演被系统拦截了，请尝试换一个温和点的指令（例如删除忧郁、悲伤等词汇）。")
+        return None
+    
+    # 清洗 JSON
     text = response.text.replace("```json", "").replace("```", "").strip()
     try:
         return json.loads(text)
     except:
-        st.error("导演逻辑解析失败，请重试")
+        st.error("导演逻辑解析失败，请尝试重新输入。")
         return None
 
 def generate_image(prompt):
@@ -165,6 +184,4 @@ if prompt := st.chat_input("输入指令 (例: 镜头1，她在雨中哭泣)"):
                     "type": "image", 
                     "content": image_url, 
                     "prompt_text": final_prompt
-
                 })
-
